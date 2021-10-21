@@ -182,13 +182,12 @@ class NTRUDecrypt:
         for j in range(self.N):
             self.g[j] = random.randint(-1,1)
 
-                
 
     def genh(self):
         """
         Generate the public key from the class values (that must have been generated previously)
         """
         x = symbols('x')
-        self.h = Poly(Poly(self.p*self.fq,x)*Poly(self.g,x)%Poly(self.I,x),domain=GF(self.q,symmetric=False))
-        return self.h.all_coeffs()
+        self.h = Poly(Poly(self.p*self.fq,x)*Poly(self.g,x)%Poly(self.I,x),domain=GF(self.q,symmetric=False)).all_coeffs()
+
 
