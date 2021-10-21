@@ -91,7 +91,6 @@ class NTRUDecrypt:
     """
 
 
-    
     def __init__(self, N=503, p=3, q=256):
         """
         Initialise with some default N, p and q parameters.
@@ -100,11 +99,11 @@ class NTRUDecrypt:
         self.p = p # Public p
         self.q = q # Public q
 
-        self.f  = np.zeros((self.N-1,), dtype=int) # Private polynomial f
-        self.fp = np.zeros((self.N-1,), dtype=int) # Inverse of f mod p
-        self.fq = np.zeros((self.N-1,), dtype=int) # Inverse of f mod q
-        self.g  = np.zeros((self.N-1,), dtype=int) # Private polynomial g
-        self.h  = np.zeros((self.N-1,), dtype=int) # Public key polynomial (mod q)
+        self.f  = np.zeros((self.N,), dtype=int) # Private polynomial f
+        self.fp = np.zeros((self.N,), dtype=int) # Inverse of f mod p
+        self.fq = np.zeros((self.N,), dtype=int) # Inverse of f mod q
+        self.g  = np.zeros((self.N,), dtype=int) # Private polynomial g
+        self.h  = np.zeros((self.N,), dtype=int) # Public key polynomial (mod q)
 
         # Ideal as array representing polynomial
         self.I         = np.zeros((self.N+1,), dtype=int)
@@ -129,11 +128,11 @@ class NTRUDecrypt:
         else:
             # Otherwise set N, and initialise polynomial arrays
             self.N = N_in
-            self.f  = np.zeros((self.N-1,), dtype=int)
-            self.fp = np.zeros((self.N-1,), dtype=int)
-            self.fq = np.zeros((self.N-1,), dtype=int)
-            self.g  = np.zeros((self.N-1,), dtype=int)
-            self.h  = np.zeros((self.N-1,), dtype=int)
+            self.f  = np.zeros((self.N,), dtype=int)
+            self.fp = np.zeros((self.N,), dtype=int)
+            self.fq = np.zeros((self.N,), dtype=int)
+            self.g  = np.zeros((self.N,), dtype=int)
+            self.h  = np.zeros((self.N,), dtype=int)
             self.I         = np.zeros((self.N+1,), dtype=int)
             self.I[self.N] = -1
             self.I[0]      = 1
@@ -142,9 +141,54 @@ class NTRUDecrypt:
         if (p_in>q_in):
             sys.exit("\n\nERROR: Input q is less than p\n\n")
         else:
-            if (math.gcd(p_in,q_in)!=1):
+            if (gcd(p_in,q_in)!=1):
                 sys.exit("\n\nERROR: Input p and q are not coprime\n\n")
             else:
                 self.p = p_in
                 self.q = q_in
-        
+
+
+    def invf(self):
+        """
+        Invert the f polynomial with respect to input p and q values (class values).
+        Return True if inverses w.r.t. p and q exists (after setting self.fp and self.fq)
+        Return False if inverse w.r.t. either/or p/q does nto exist
+        """
+
+        fp_tmp = poly_inv(self.f,self.I,self.p)
+        fq_tmp = poly_inv(self.f,self.I,self.q)
+        if fp_tmp!=False and fq_tmp!=False:
+            self.fp = np.array(fp_tmp)
+            self.fq = np.array(fq_tmp)
+            return True
+        else:
+            return False
+
+                
+    def genfg(self):
+        """
+        Randomly generate f and g for the private key and their inverses
+        """
+        # Make 100 attempts and exit with error if we cant find an inverse in there
+        maxTries = 100
+        for i in range(maxTries):
+            for j in range(self.N):
+                self.f[j] = random.randint(-1,1)
+            invStat = self.invf()
+            if invStat==True:
+                break
+            elif i==maxTries-1:
+                sys.exit("Cannot generate required inverses of f")
+        for j in range(self.N):
+            self.g[j] = random.randint(-1,1)
+
+                
+
+    def genh(self):
+        """
+        Generate the public key from the class values (that must have been generated previously)
+        """
+        x = symbols('x')
+        self.h = Poly(Poly(self.p*self.fq,x)*Poly(self.g,x)%Poly(self.I,x),domain=GF(self.q,symmetric=False))
+        return self.h.all_coeffs()
+
