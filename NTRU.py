@@ -2,10 +2,13 @@
 # We use numpy for all our polynomial operations
 import numpy as np
 # And math for a few bits and pieces
-import math
+from math import log, gcd
+import random
 import sys
 
 from sympy import Poly, symbols, GF, invert
+
+
 
 def checkPrime(P):
     """
