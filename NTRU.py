@@ -28,7 +28,54 @@ def checkPrime(P):
     # If we have got this far then P is not divisable by any required number, therefore prime!
     return True
 
-            
+
+
+def poly_inv(poly_in,poly_I,poly_mod):
+    """
+    Find the inverse of the polynomial poly_in in the Galois filed GF(poly_mod)
+    i.e. the inverse in
+        Z/poly_mod[X]/poly_I
+
+    Inputs and outputs are given as an array of coefficients where
+        x^4 + 5x^2 + 3 == [1,0,5,0,3]
+
+    Returns
+    =======
+    Either the boolean False if the inverse cannot be found, or the inverse of the
+    polynomial poly_in as an array of coefficients.
+
+    References
+    ==========
+    https://arxiv.org/abs/1311.1779
+    """
+    
+    x = symbols('x')
+    if checkPrime(poly_mod):
+        # For prime poly_mod we only need use the sympy invert routine, we then pull out
+        # all the coefficients for the inverse and return (not all_coeffs() also includes
+        # zeros in the array
+        inv = invert(Poly(poly_in,x),Poly(poly_I,x),domain=GF(poly_mod,symmetric=False))
+        return inv.all_coeffs()
+    elif math.log(poly_mod, 2).is_integer():
+        # Follow the procedure outlined in https://arxiv.org/abs/1311.1779 to find the inverse
+        inv = invert(Poly(poly_in,x),Poly(poly_I,x),domain=GF(2,symmetric=False))
+        ex = int(math.log(poly_mod,2))
+        for a in range(1,ex):
+            inv = ((2*inv-Poly(poly_in,x)*inv**2)%Poly(poly_I,x)).trunc(poly_mod)
+        inv = Poly(inv,domain=GF(poly_mod,symmetric=False))
+        # Error check, multiplying inverse by polynomial must be 1
+        errC = Poly(inv.mul(Poly(poly_in)) % Poly(poly_I,x),domain=GF(poly_mod,symmetric=False)).all_coeffs()
+        if len(errC)!=1 and errC[0]!=1:
+            # Exit with error if inverse cannot be found
+            return False
+        # Passed the test so return the polynomial as an array
+        return inv.all_coeffs()
+    else:
+        # Otherwise we cannot find the inverse
+        return False
+
+    
+        
 
 class NTRUDecrypt:
 
@@ -44,7 +91,7 @@ class NTRUDecrypt:
     
     def __init__(self, N=503, p=3, q=256):
         """
-        Initialise with some default N, p and q parameters
+        Initialise with some default N, p and q parameters.
         """
         self.N = N # Public N
         self.p = p # Public p
@@ -56,7 +103,12 @@ class NTRUDecrypt:
         self.g  = np.zeros((self.N-1,), dtype=int) # Private polynomial g
         self.h  = np.zeros((self.N-1,), dtype=int) # Public key polynomial (mod q)
 
-        
+        # Ideal as array representing polynomial
+        self.I         = np.zeros((self.N+1,), dtype=int)
+        self.I[self.N] = -1
+        self.I[0]      = 1
+
+
     def setNpq(self,N_in,p_in,q_in):
         """
         Set the N, p and q values and perform checks on their validity, i.e.:
@@ -79,6 +131,9 @@ class NTRUDecrypt:
             self.fq = np.zeros((self.N-1,), dtype=int)
             self.g  = np.zeros((self.N-1,), dtype=int)
             self.h  = np.zeros((self.N-1,), dtype=int)
+            self.I         = np.zeros((self.N+1,), dtype=int)
+            self.I[self.N] = -1
+            self.I[0]      = 1
 
         # First check that q is less than p
         if (p_in>q_in):
