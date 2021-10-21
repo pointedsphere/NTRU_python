@@ -58,28 +58,27 @@ def poly_inv(poly_in,poly_I,poly_mod):
         # For prime poly_mod we only need use the sympy invert routine, we then pull out
         # all the coefficients for the inverse and return (not all_coeffs() also includes
         # zeros in the array
-        inv = invert(Poly(poly_in,x),Poly(poly_I,x),domain=GF(poly_mod,symmetric=False))
-        return inv.all_coeffs()
-    elif math.log(poly_mod, 2).is_integer():
-        # Follow the procedure outlined in https://arxiv.org/abs/1311.1779 to find the inverse
-        inv = invert(Poly(poly_in,x),Poly(poly_I,x),domain=GF(2,symmetric=False))
-        ex = int(math.log(poly_mod,2))
-        for a in range(1,ex):
-            inv = ((2*inv-Poly(poly_in,x)*inv**2)%Poly(poly_I,x)).trunc(poly_mod)
-        inv = Poly(inv,domain=GF(poly_mod,symmetric=False))
-        # Error check, multiplying inverse by polynomial must be 1
-        errC = Poly(inv.mul(Poly(poly_in)) % Poly(poly_I,x),domain=GF(poly_mod,symmetric=False)).all_coeffs()
-        if len(errC)!=1 and errC[0]!=1:
-            # Exit with error if inverse cannot be found
+        try:
+            inv = invert(Poly(poly_in,x).as_expr(),Poly(poly_I,x).as_expr(),domain=GF(poly_mod,symmetric=False))
+        except:
             return False
-        # Passed the test so return the polynomial as an array
+        return Poly(inv,x).all_coeffs()
+    elif log(poly_mod, 2).is_integer():
+        try:
+            # Follow the procedure outlined in https://arxiv.org/abs/1311.1779 to find the inverse
+            inv = invert(Poly(poly_in,x).as_expr(),Poly(poly_I,x).as_expr(),domain=GF(2,symmetric=False))
+            ex = int(log(poly_mod,2))
+            for a in range(1,ex):
+                inv = ((2*Poly(inv,x)-Poly(poly_in,x)*Poly(inv,x)**2)%Poly(poly_I,x)).trunc(poly_mod)
+            inv = Poly(inv,domain=GF(poly_mod,symmetric=False))
+        except:
+            return False
         return inv.all_coeffs()
     else:
         # Otherwise we cannot find the inverse
         return False
 
-    
-        
+
 
 class NTRUDecrypt:
 
