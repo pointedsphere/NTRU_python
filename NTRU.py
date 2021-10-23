@@ -201,9 +201,20 @@ class NTRUDecrypt:
         Write the public key file
         """
         pubHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " \
-            + str(self.N) + "\nh ::: "
+            + str(self.N) + "\nh :::"
         np.savetxt(filename+".pub", self.h, newline=" ", header=pubHead, fmt="%s")
 
+
+    def readPub(self,filename="key"):
+        """
+        Read a public key file
+        """
+        with open(filename+".pub","r") as f:
+            self.p = int(f.readline().split(" ")[-1])
+            self.q = int(f.readline().split(" ")[-1])
+            self.N = int(f.readline().split(" ")[-1])
+            self.h = np.array(f.readline().split(" ")[3:-1],dtype=int)
+        
 
     def writePriv(self,filename="key"):
         """
@@ -212,6 +223,21 @@ class NTRUDecrypt:
         privHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " \
             + str(self.N) + "\nf/fp/fq/g :::"
         np.savetxt(filename+".priv", (self.f,self.fp,self.fq,self.g), header=privHead, newline="\n", fmt="%s")
+
+
+    def readPriv(self,filename="key"):
+        """
+        Read a public key file
+        """
+        with open(filename+".priv","r") as f:
+            self.p = int(f.readline().split(" ")[-1])
+            self.q = int(f.readline().split(" ")[-1])
+            self.N = int(f.readline().split(" ")[-1])
+            tmp = f.readline()
+            self.f  = np.array(f.readline().split(" "),dtype=int)
+            self.fp = np.array(f.readline().split(" "),dtype=int)
+            self.fq = np.array(f.readline().split(" "),dtype=int)
+            self.g  = np.array(f.readline().split(" "),dtype=int)
         
         
     def genPubPriv(self):
