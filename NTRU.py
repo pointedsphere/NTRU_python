@@ -15,7 +15,6 @@ def checkPrime(P):
     Check if the input integer P is prime, if prime return True
     else return False.
     """
-    
     if (P<=1):
         # These values are never prime
         return False
@@ -52,7 +51,6 @@ def poly_inv(poly_in,poly_I,poly_mod):
     ==========
     https://arxiv.org/abs/1311.1779
     """
-    
     x = symbols('x')
     if checkPrime(poly_mod):
         # For prime poly_mod we only need use the sympy invert routine, we then pull out
@@ -121,7 +119,6 @@ class NTRUDecrypt:
         Note : The class variables N, p and q are not private, specifically as (for experimentaion)
                a user may want to set these values to unwise paremeters.
         """
-
         # First check N is prime
         if (not checkPrime(N_in)):
             sys.exit("\n\nERROR: Input value of N not prime\n\n")
@@ -154,7 +151,6 @@ class NTRUDecrypt:
         Return True if inverses w.r.t. p and q exists (after setting self.fp and self.fq)
         Return False if inverse w.r.t. either/or p/q does nto exist
         """
-
         fp_tmp = poly_inv(self.f,self.I,self.p)
         fq_tmp = poly_inv(self.f,self.I,self.q)
         if len(fp_tmp)>0 and len(fq_tmp)>0:
@@ -263,6 +259,7 @@ class NTRUEncrypt:
     A class to encrypt some data based on a known public key
     """
 
+    
     def __init__(self, N=503, p=3, q=256):
         """
         Initialise with some default N, p and q parameters.
