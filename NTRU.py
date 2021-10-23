@@ -196,3 +196,32 @@ class NTRUDecrypt:
         self.h = Poly(Poly(self.p*self.fq,x)*Poly(self.g,x)%Poly(self.I,x),domain=GF(self.q,symmetric=False)).all_coeffs()
 
 
+    def writePub(self,filename="key"):
+        """
+        Write the public key file
+        """
+        pubHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " \
+            + str(self.N) + "\nh ::: "
+        np.savetxt(filename+".pub", self.h, newline=" ", header=pubHead, fmt="%s")
+
+
+    def writePriv(self,filename="key"):
+        """
+        Write the private key file
+        """
+        privHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " \
+            + str(self.N) + "\nf/fp/fq/g :::"
+        np.savetxt(filename+".priv", (self.f,self.fp,self.fq,self.g), header=privHead, newline="\n", fmt="%s")
+        
+        
+    def genPubPriv(self):
+        """
+        Generate the public and private keys from class N, p and q values.
+        Also write output files for the public and private keys
+        """
+        self.genfg()
+        self.genh()
+        self.writePub()
+        self.writePriv()
+    
+        
