@@ -273,6 +273,7 @@ class NTRUEncrypt:
         self.r = np.zeros((self.N,), dtype=int) # A random `blinding value'
         self.genr()
         self.m = np.zeros((self.N,), dtype=int) # The message array
+        self.e = np.zeros((self.N,), dtype=int) # The encrypted message
         
         # Ideal as array representing polynomial
         self.I         = np.zeros((self.N+1,), dtype=int)
@@ -302,5 +303,16 @@ class NTRUEncrypt:
         self.r = np.zeros((self.N,), dtype=int) # A random `blinding value'
         for i in range(self.N):
             self.r[i] = random.randint(0,self.q-1)
+        
+
+    def encrypt(self):
+        """
+        Encrypt the message m into the array e
+        NOTE : The message m must be set befor ethis routine is called
+        """
+        x = symbols('x')
+        self.e = np.array(Poly((Poly(self.r,x)*Poly(self.h,x)+Poly(self.m,x))%Poly(self.I,x),\
+                               domain=GF(self.q,symmetric=False)).all_coeffs(),dtype=int)
+
 
 
