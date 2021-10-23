@@ -157,9 +157,14 @@ class NTRUDecrypt:
 
         fp_tmp = poly_inv(self.f,self.I,self.p)
         fq_tmp = poly_inv(self.f,self.I,self.q)
-        if fp_tmp!=False and fq_tmp!=False:
+        if len(fp_tmp)>0 and len(fq_tmp)>0:
             self.fp = np.array(fp_tmp)
             self.fq = np.array(fq_tmp)
+            # Make sure the arrays have leading zeros
+            if len(self.fp)<self.N:
+                self.fp = np.concatenate([np.zeros(self.N-len(self.fp),dtype=int),self.fp])
+            if len(self.fq)<self.N:
+                self.fq = np.concatenate([np.zeros(self.N-len(self.fq),dtype=int),self.fq])            
             return True
         else:
             return False
