@@ -45,7 +45,7 @@ def poly_inv(poly_in,poly_I,poly_mod):
 
     Returns
     =======
-    Either the boolean False if the inverse cannot be found, or the inverse of the
+    Either an empty array if the inverse cannot be found, or the inverse of the
     polynomial poly_in as an array of coefficients.
 
     References
@@ -61,8 +61,8 @@ def poly_inv(poly_in,poly_I,poly_mod):
         try:
             inv = invert(Poly(poly_in,x).as_expr(),Poly(poly_I,x).as_expr(),domain=GF(poly_mod,symmetric=False))
         except:
-            return False
-        return Poly(inv,x).all_coeffs()
+            return np.array([])
+        return np.array(Poly(inv,x).all_coeffs(),dtype=int)
     elif log(poly_mod, 2).is_integer():
         try:
             # Follow the procedure outlined in https://arxiv.org/abs/1311.1779 to find the inverse
@@ -72,11 +72,11 @@ def poly_inv(poly_in,poly_I,poly_mod):
                 inv = ((2*Poly(inv,x)-Poly(poly_in,x)*Poly(inv,x)**2)%Poly(poly_I,x)).trunc(poly_mod)
             inv = Poly(inv,domain=GF(poly_mod,symmetric=False))
         except:
-            return False
-        return inv.all_coeffs()
+            return np.array([])
+        return np.array(inv.all_coeffs(),dtype=int)
     else:
         # Otherwise we cannot find the inverse
-        return False
+        return np.array([])
 
 
 
