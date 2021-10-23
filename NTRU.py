@@ -127,7 +127,7 @@ class NTRUDecrypt:
             sys.exit("\n\nERROR: Input value of N not prime\n\n")
         else:
             # Otherwise set N, and initialise polynomial arrays
-            self.N = N_in
+            self.N  = N_in
             self.f  = np.zeros((self.N,), dtype=int)
             self.fp = np.zeros((self.N,), dtype=int)
             self.fq = np.zeros((self.N,), dtype=int)
@@ -214,7 +214,10 @@ class NTRUDecrypt:
             self.q = int(f.readline().split(" ")[-1])
             self.N = int(f.readline().split(" ")[-1])
             self.h = np.array(f.readline().split(" ")[3:-1],dtype=int)
-        
+        self.I         = np.zeros((self.N+1,), dtype=int)
+        self.I[self.N] = -1
+        self.I[0]      = 1
+
 
     def writePriv(self,filename="key"):
         """
@@ -238,7 +241,10 @@ class NTRUDecrypt:
             self.fp = np.array(f.readline().split(" "),dtype=int)
             self.fq = np.array(f.readline().split(" "),dtype=int)
             self.g  = np.array(f.readline().split(" "),dtype=int)
-        
+        self.I         = np.zeros((self.N+1,), dtype=int)
+        self.I[self.N] = -1
+        self.I[0]      = 1
+
         
     def genPubPriv(self):
         """
@@ -249,5 +255,55 @@ class NTRUDecrypt:
         self.genh()
         self.writePub()
         self.writePriv()
-    
+
+
+
+class NTRUEncrypt:
+    """
+    A class to encrypt some data based on a known public key
+    """
+
+    def __init__(self, N=503, p=3, q=256):
+        """
+        Initialise with some default N, p and q parameters.
+        """
+        self.N = N # Public N
+        self.p = p # Public p
+        self.q = q # Public q
+
+        self.g = np.zeros((self.N,), dtype=int) # Private polynomial g
+        self.h = np.zeros((self.N,), dtype=int) # Public key polynomial (mod q)
+        self.r = np.zeros((self.N,), dtype=int) # A random `blinding value'
+        self.genr()
+        self.m = np.zeros((self.N,), dtype=int) # The message array
         
+        # Ideal as array representing polynomial
+        self.I         = np.zeros((self.N+1,), dtype=int)
+        self.I[self.N] = -1
+        self.I[0]      = 1
+
+
+    def readPub(self,filename="key"):
+        """
+        Read a public key file, generate a new r value based on new N
+        """
+        with open(filename+".pub","r") as f:
+            self.p = int(f.readline().split(" ")[-1])
+            self.q = int(f.readline().split(" ")[-1])
+            self.N = int(f.readline().split(" ")[-1])
+            self.h = np.array(f.readline().split(" ")[3:-1],dtype=int)
+        self.I         = np.zeros((self.N+1,), dtype=int)
+        self.I[self.N] = -1
+        self.I[0]      = 1
+        self.genr()
+
+
+    def genr(self):
+        """
+        Generate the random binding polynomial array r, with values mod q
+        """
+        self.r = np.zeros((self.N,), dtype=int) # A random `blinding value'
+        for i in range(self.N):
+            self.r[i] = random.randint(0,self.q-1)
+
+
