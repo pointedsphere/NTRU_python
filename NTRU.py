@@ -1,11 +1,8 @@
-
-# We use numpy for all our polynomial operations
 import numpy as np
-# And math for a few bits and pieces
 from math import log, gcd
 import random
 import sys
-
+# Use sympy for polynomial operations
 from sympy import Poly, symbols, GF, invert
 
 
@@ -15,7 +12,6 @@ def checkPrime(P):
     Check if the input integer P is prime, if prime return True
     else return False.
     """
-    
     if (P<=1):
         # These values are never prime
         return False
@@ -52,7 +48,6 @@ def poly_inv(poly_in,poly_I,poly_mod):
     ==========
     https://arxiv.org/abs/1311.1779
     """
-    
     x = symbols('x')
     if checkPrime(poly_mod):
         # For prime poly_mod we only need use the sympy invert routine, we then pull out
@@ -93,7 +88,7 @@ class NTRUDecrypt:
 
     def __init__(self, N=503, p=3, q=256):
         """
-        Initialise with some default N, p and q parameters.
+        Initialise with some default N, p and q parameters (if not given as initialisation params)
         """
         self.N = N # Public N
         self.p = p # Public p
@@ -121,13 +116,12 @@ class NTRUDecrypt:
         Note : The class variables N, p and q are not private, specifically as (for experimentaion)
                a user may want to set these values to unwise paremeters.
         """
-
         # First check N is prime
         if (not checkPrime(N_in)):
             sys.exit("\n\nERROR: Input value of N not prime\n\n")
         else:
             # Otherwise set N, and initialise polynomial arrays
-            self.N = N_in
+            self.N  = N_in
             self.f  = np.zeros((self.N,), dtype=int)
             self.fp = np.zeros((self.N,), dtype=int)
             self.fq = np.zeros((self.N,), dtype=int)
@@ -154,7 +148,6 @@ class NTRUDecrypt:
         Return True if inverses w.r.t. p and q exists (after setting self.fp and self.fq)
         Return False if inverse w.r.t. either/or p/q does nto exist
         """
-
         fp_tmp = poly_inv(self.f,self.I,self.p)
         fq_tmp = poly_inv(self.f,self.I,self.q)
         if len(fp_tmp)>0 and len(fq_tmp)>0:
@@ -193,7 +186,8 @@ class NTRUDecrypt:
         Generate the public key from the class values (that must have been generated previously)
         """
         x = symbols('x')
-        self.h = Poly(Poly(self.p*self.fq,x)*Poly(self.g,x)%Poly(self.I,x),domain=GF(self.q,symmetric=False)).all_coeffs()
+        self.h = Poly(Poly(self.p*self.fq,x)*Poly(self.g,x)%Poly(self.I,x),\
+                      domain=GF(self.q,symmetric=False)).all_coeffs()
 
 
     def writePub(self,filename="key"):
@@ -214,7 +208,10 @@ class NTRUDecrypt:
             self.q = int(f.readline().split(" ")[-1])
             self.N = int(f.readline().split(" ")[-1])
             self.h = np.array(f.readline().split(" ")[3:-1],dtype=int)
-        
+        self.I         = np.zeros((self.N+1,), dtype=int)
+        self.I[self.N] = -1
+        self.I[0]      = 1
+
 
     def writePriv(self,filename="key"):
         """
@@ -238,7 +235,10 @@ class NTRUDecrypt:
             self.fp = np.array(f.readline().split(" "),dtype=int)
             self.fq = np.array(f.readline().split(" "),dtype=int)
             self.g  = np.array(f.readline().split(" "),dtype=int)
-        
+        self.I         = np.zeros((self.N+1,), dtype=int)
+        self.I[self.N] = -1
+        self.I[0]      = 1
+
         
     def genPubPriv(self):
         """
@@ -249,5 +249,91 @@ class NTRUDecrypt:
         self.genh()
         self.writePub()
         self.writePriv()
-    
+
+
+    def decrypt(self,e):
+        """
+        Decrypt the message given as in an input array e into the decrypted message m and return
+        """
+        # The encrypted message e must have degree < N
+        if len(e)>self.N:
+            sys.exit("Encrypted message has degree > N")
+        # Error checks passed, now decrypt and return as a np array
+        x = symbols('x')
+        a = np.array(Poly((Poly(self.f,x)*Poly(e,x))%Poly(self.I,x),\
+                          domain=GF(self.q,symmetric=True)).all_coeffs(),dtype=int)
+        b = Poly(a,x,domain=GF(self.p,symmetric=True))
+        c = Poly((Poly(self.fp,x)*b)%Poly(self.I,x),\
+                 domain=GF(self.p,symmetric=True))
+        return np.array(c.all_coeffs(),dtype=int)
         
+
+
+class NTRUEncrypt:
+    """
+    A class to encrypt some data based on a known public key
+    """
+
+    
+    def __init__(self, N=503, p=3, q=256):
+        """
+        Initialise with some default N, p and q parameters.
+        """
+        self.N = N # Public N
+        self.p = p # Public p
+        self.q = q # Public q
+
+        self.g = np.zeros((self.N,), dtype=int) # Private polynomial g
+        self.h = np.zeros((self.N,), dtype=int) # Public key polynomial (mod q)
+        self.r = np.zeros((self.N,), dtype=int) # A random `blinding value'
+        self.genr()
+        self.m = np.zeros((self.N,), dtype=int) # The message array
+        self.e = np.zeros((self.N,), dtype=int) # The encrypted message
+        
+        # Ideal as array representing polynomial
+        self.I         = np.zeros((self.N+1,), dtype=int)
+        self.I[self.N] = -1
+        self.I[0]      = 1
+
+        self.readKey = False # We have not yet read the public key file
+
+
+    def readPub(self,filename="key"):
+        """
+        Read a public key file, generate a new r value based on new N
+        """
+        with open(filename+".pub","r") as f:
+            self.p = int(f.readline().split(" ")[-1])
+            self.q = int(f.readline().split(" ")[-1])
+            self.N = int(f.readline().split(" ")[-1])
+            self.h = np.array(f.readline().split(" ")[3:-1],dtype=int)
+        self.I         = np.zeros((self.N+1,), dtype=int)
+        self.I[self.N] = -1
+        self.I[0]      = 1
+        self.genr()
+        self.readKey = True
+
+
+    def genr(self):
+        """
+        Generate the random binding polynomial array r, with values mod q
+        """
+        self.r = np.zeros((self.N,), dtype=int) # A random `blinding value'
+        for i in range(self.N):
+            self.r[i] = random.randint(0,self.q-1)
+        
+
+    def encrypt(self):
+        """
+        Encrypt the message m into the array e
+        NOTE : The message m must be set befor ethis routine is called
+        """
+        if self.readKey == False:
+          sys.exit("Error : Not read the public key file, so cannot encrypt")
+        x = symbols('x')
+        self.e = np.array(Poly((Poly(self.r,x)*Poly(self.h,x)+Poly(self.m,x))%Poly(self.I,x),\
+                               domain=GF(self.q,symmetric=False)).all_coeffs(),dtype=int)
+
+
+
+
