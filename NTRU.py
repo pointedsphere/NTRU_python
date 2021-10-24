@@ -186,7 +186,8 @@ class NTRUDecrypt:
         Generate the public key from the class values (that must have been generated previously)
         """
         x = symbols('x')
-        self.h = Poly(Poly(self.p*self.fq,x)*Poly(self.g,x)%Poly(self.I,x),domain=GF(self.q,symmetric=False)).all_coeffs()
+        self.h = Poly(Poly(self.p*self.fq,x)*Poly(self.g,x)%Poly(self.I,x),\
+                      domain=GF(self.q,symmetric=False)).all_coeffs()
 
 
     def writePub(self,filename="key"):
@@ -250,6 +251,23 @@ class NTRUDecrypt:
         self.writePriv()
 
 
+    def decrypt(self,e):
+        """
+        Decrypt the message given as in an input array e into the decrypted message m and return
+        """
+        # The encrypted message e must have degree < N
+        if len(e)>self.N:
+            sys.exit("Encrypted message has degree > N")
+        # Error checks passed, now decrypt and return as a np array
+        x = symbols('x')
+        a = np.array(Poly((Poly(self.f,x)*Poly(e,x))%Poly(self.I,x),\
+                          domain=GF(self.q,symmetric=True)).all_coeffs(),dtype=int)
+        b = Poly(a,x,domain=GF(self.p,symmetric=True))
+        c = Poly((Poly(self.fp,x)*b)%Poly(self.I,x),\
+                 domain=GF(self.p,symmetric=True))
+        return np.array(c.all_coeffs(),dtype=int)
+        
+
 
 class NTRUEncrypt:
     """
@@ -277,6 +295,8 @@ class NTRUEncrypt:
         self.I[self.N] = -1
         self.I[0]      = 1
 
+        self.readKey = False # We have not yet read the public key file
+
 
     def readPub(self,filename="key"):
         """
@@ -291,6 +311,7 @@ class NTRUEncrypt:
         self.I[self.N] = -1
         self.I[0]      = 1
         self.genr()
+        self.readKey = True
 
 
     def genr(self):
@@ -307,9 +328,12 @@ class NTRUEncrypt:
         Encrypt the message m into the array e
         NOTE : The message m must be set befor ethis routine is called
         """
+        if self.readKey == False:
+          sys.exit("Error : Not read the public key file, so cannot encrypt")
         x = symbols('x')
         self.e = np.array(Poly((Poly(self.r,x)*Poly(self.h,x)+Poly(self.m,x))%Poly(self.I,x),\
                                domain=GF(self.q,symmetric=False)).all_coeffs(),dtype=int)
+
 
 
 
