@@ -1,11 +1,8 @@
-
-# We use numpy for all our polynomial operations
 import numpy as np
-# And math for a few bits and pieces
 from math import log, gcd
 import random
 import sys
-
+# Use sympy for polynomial operations
 from sympy import Poly, symbols, GF, invert
 
 
@@ -91,7 +88,7 @@ class NTRUDecrypt:
 
     def __init__(self, N=503, p=3, q=256):
         """
-        Initialise with some default N, p and q parameters.
+        Initialise with some default N, p and q parameters (if not given as initialisation params)
         """
         self.N = N # Public N
         self.p = p # Public p
