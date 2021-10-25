@@ -89,6 +89,50 @@ def padArr(A_in,A_out_size):
     Return the numy array of size A_out_size with leading zeros
     """
     return np.pad(A_in,(A_out_size-len(A_in),0),constant_values=(0))
+
+
+def genRand10(L,P,M):
+    """
+    Generate a numpy array of length L with P 1's, M -1's and the remaining elements 0.
+    The elements will be in a random order, with randomisation done using np.random.shuffle.
+    This is used to generate the f, p and r arrays for NTRU encryption based on [1].
+
+    INPUTS:
+    =======
+    L : Integer, the length of the desired output array.
+    P : Integer, the number of `positive' i.e. +1's in the array.
+    M : Integer, the number of `negative' i.e. -1's in the array.
+
+    RETURNS:
+    ========
+    An integer numpy array with P +1's, M -1's and L-P-M 0's.
+
+    REFERENCES:
+    ===========
+    [1] Hoffstein J, Pipher J, Silverman JH. NTRU: A Ring-Based Public Key Cryptosystem. 
+        Algorithmic Number Theory. 1998; 267--288. 
+    """
+
+    # Error check, the munber of 1's and -1's must be less than or equal to length
+    if P+M>L:
+        sys.exit("ERROR: Asking for P+M>L.")
+
+    # Generate an `empty' array of zeros
+    R = np.zeros(L,dtype=int)
+    
+    # Loop through and populate the array with 1's and -1's, not in random order
+    for i in range(L):
+        if i<P:
+            R[i] = 1
+        elif i<P+M:
+            R[i] = -1
+        else:
+            break
+
+    # Return a randomised array
+    np.random.shuffle(R)
+    return R
+        
     
 
 class NTRUDecrypt:
