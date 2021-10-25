@@ -49,31 +49,91 @@ def poly_inv(poly_in,poly_I,poly_mod):
     https://arxiv.org/abs/1311.1779
     """
     x = symbols('x')
+    Ppoly_I = Poly(poly_I,x)
+    Npoly_I = len(Ppoly_I.all_coeffs())
     if checkPrime(poly_mod):
         # For prime poly_mod we only need use the sympy invert routine, we then pull out
         # all the coefficients for the inverse and return (not all_coeffs() also includes
         # zeros in the array
         try:
-            inv = invert(Poly(poly_in,x).as_expr(),Poly(poly_I,x).as_expr(),domain=GF(poly_mod,symmetric=False))
+            inv = invert(Poly(poly_in,x).as_expr(),Ppoly_I.as_expr(),domain=GF(poly_mod,symmetric=False))
         except:
             return np.array([])
-        return np.array(Poly(inv,x).all_coeffs(),dtype=int)
     elif log(poly_mod, 2).is_integer():
         try:
             # Follow the procedure outlined in https://arxiv.org/abs/1311.1779 to find the inverse
-            inv = invert(Poly(poly_in,x).as_expr(),Poly(poly_I,x).as_expr(),domain=GF(2,symmetric=False))
+            inv = invert(Poly(poly_in,x).as_expr(),Ppoly_I.as_expr(),domain=GF(2,symmetric=False))
             ex = int(log(poly_mod,2))
             for a in range(1,ex):
-                inv = ((2*Poly(inv,x)-Poly(poly_in,x)*Poly(inv,x)**2)%Poly(poly_I,x)).trunc(poly_mod)
+                inv = ((2*Poly(inv,x)-Poly(poly_in,x)*Poly(inv,x)**2)%Ppoly_I).trunc(poly_mod)
             inv = Poly(inv,domain=GF(poly_mod,symmetric=False))
         except:
             return np.array([])
-        return np.array(inv.all_coeffs(),dtype=int)
     else:
         # Otherwise we cannot find the inverse
         return np.array([])
 
+    # If we have got this far we have calculated an inverse, double check the inverse via poly mult
+    tmpCheck = np.array(Poly((Poly(inv,x)*Poly(poly_in,x))%Ppoly_I,\
+                             domain=GF(poly_mod,symmetric=False)).all_coeffs(),dtype=int)
+    if len(tmpCheck)>1 or tmpCheck[0]!=1:
+        sys.exit("ERROR : Error in caclualtion of polynomial inverse")
 
+    # Passed the error check so return polynomial coefficients as array
+    return padArr(np.array(Poly(inv,x).all_coeffs(),dtype=int),Npoly_I-1)
+
+    
+def padArr(A_in,A_out_size):
+    """
+    Take an input numpy integer array A_in and pad with leading zeros.
+    Return the numy array of size A_out_size with leading zeros
+    """
+    return np.pad(A_in,(A_out_size-len(A_in),0),constant_values=(0))
+
+
+def genRand10(L,P,M):
+    """
+    Generate a numpy array of length L with P 1's, M -1's and the remaining elements 0.
+    The elements will be in a random order, with randomisation done using np.random.shuffle.
+    This is used to generate the f, p and r arrays for NTRU encryption based on [1].
+
+    INPUTS:
+    =======
+    L : Integer, the length of the desired output array.
+    P : Integer, the number of `positive' i.e. +1's in the array.
+    M : Integer, the number of `negative' i.e. -1's in the array.
+
+    RETURNS:
+    ========
+    An integer numpy array with P +1's, M -1's and L-P-M 0's.
+
+    REFERENCES:
+    ===========
+    [1] Hoffstein J, Pipher J, Silverman JH. NTRU: A Ring-Based Public Key Cryptosystem. 
+        Algorithmic Number Theory. 1998; 267--288. 
+    """
+
+    # Error check, the munber of 1's and -1's must be less than or equal to length
+    if P+M>L:
+        sys.exit("ERROR: Asking for P+M>L.")
+
+    # Generate an `empty' array of zeros
+    R = np.zeros((L,),dtype=int)
+    
+    # Loop through and populate the array with 1's and -1's, not in random order
+    for i in range(L):
+        if i<P:
+            R[i] = 1
+        elif i<P+M:
+            R[i] = -1
+        else:
+            break
+
+    # Return a randomised array
+    np.random.shuffle(R)
+    return R
+        
+    
 
 class NTRUDecrypt:
 
@@ -86,14 +146,27 @@ class NTRUDecrypt:
     """
 
 
-    def __init__(self, N=503, p=3, q=256):
+    def __init__(self, N=503, p=3, q=256, df=61, dg=20, d=18):
         """
         Initialise with some default N, p and q parameters (if not given as initialisation params)
+        
+        INPUTS:
+        =======
+        N  : Integer, order of the polynomial ring.
+        p  : Integer, modulus of inverse of f polynomial for fp.
+        q  : Integer, modulus of inverse of f polynomial for fq.
+        df : Integer, number of coefficients 1 in polynomial f.
+        dg : Integer, number of coefficients 1 in polynomial g.
+        gr : Integer, number of coefficients 1 in the random polynomial (used in encryption).
         """
         self.N = N # Public N
         self.p = p # Public p
         self.q = q # Public q
 
+        self.df = df # Number of 1's in f
+        self.dg = dg # Number of 1's in g
+        self.dr = d # Number of 1's in r (for encryption)
+        
         self.f  = np.zeros((self.N,), dtype=int) # Private polynomial f
         self.fp = np.zeros((self.N,), dtype=int) # Inverse of f mod p
         self.fq = np.zeros((self.N,), dtype=int) # Inverse of f mod q
@@ -106,7 +179,7 @@ class NTRUDecrypt:
         self.I[0]      = 1
 
 
-    def setNpq(self,N_in,p_in,q_in):
+    def setNpq(self,N=None,p=None,q=None,df=None,dg=None,d=None):
         """
         Set the N, p and q values and perform checks on their validity, i.e.:
           - N must be prime
@@ -115,32 +188,71 @@ class NTRUDecrypt:
 
         Note : The class variables N, p and q are not private, specifically as (for experimentaion)
                a user may want to set these values to unwise paremeters.
+
+        REFERENCES:
+        ===========
+        [1] Hoffstein J, Pipher J, Silverman JH. NTRU: A Ring-Based Public Key Cryptosystem. 
+            Algorithmic Number Theory. 1998; 267--288. 
         """
-        # First check N is prime
-        if (not checkPrime(N_in)):
-            sys.exit("\n\nERROR: Input value of N not prime\n\n")
-        else:
-            # Otherwise set N, and initialise polynomial arrays
-            self.N  = N_in
-            self.f  = np.zeros((self.N,), dtype=int)
-            self.fp = np.zeros((self.N,), dtype=int)
-            self.fq = np.zeros((self.N,), dtype=int)
-            self.g  = np.zeros((self.N,), dtype=int)
-            self.h  = np.zeros((self.N,), dtype=int)
-            self.I         = np.zeros((self.N+1,), dtype=int)
-            self.I[self.N] = -1
-            self.I[0]      = 1
-
-        # First check that q is less than p
-        if (p_in>q_in):
-            sys.exit("\n\nERROR: Input q is less than p\n\n")
-        else:
-            if (gcd(p_in,q_in)!=1):
-                sys.exit("\n\nERROR: Input p and q are not coprime\n\n")
+        
+        if N is not None:
+            # First check N is prime
+            if (not checkPrime(N)):
+                sys.exit("\n\nERROR: Input value of N not prime\n\n")
             else:
-                self.p = p_in
-                self.q = q_in
+                # Error checks based on number of desired 1's and -1's in df, dg and dr arrays
+                if df is None:
+                    if 2*self.df>N:
+                        sys.exit("\n\nERROR: Input N too small compared to default df "+str(self.df)+"\n\n")
+                if dg is None:
+                    if 2*self.dg>N:
+                        sys.exit("\n\nERROR: Input N too small compared to default dg "+str(self.dg)+"\n\n")
+                if d is None:
+                    if 2*self.dr>N:
+                        sys.exit("\n\nERROR: Input N too small compared to default dr "+str(self.dr)+"\n\n")
+                # Otherwise set N, and initialise polynomial arrays
+                self.N  = N
+                self.f  = np.zeros((self.N,), dtype=int)
+                self.fp = np.zeros((self.N,), dtype=int)
+                self.fq = np.zeros((self.N,), dtype=int)
+                self.g  = np.zeros((self.N,), dtype=int)
+                self.h  = np.zeros((self.N,), dtype=int)
+                self.I         = np.zeros((self.N+1,), dtype=int)
+                self.I[self.N] = -1
+                self.I[0]      = 1
 
+        # Can only set p and q together
+        if (p is None and q is not None) or (p is not None and q is None):
+            sys.exit("\n\nError: Can only set p and q together, not individually")
+        else:
+            # First check that 8p<=q from [1]
+            if ((8*p)>q):
+                sys.exit("\n\nERROR: We require 8p <= q\n\n")
+            else:
+                if (gcd(p,q)!=1):
+                    sys.exit("\n\nERROR: Input p and q are not coprime\n\n")
+                else:
+                    self.p = p
+                    self.q = q
+
+        if df is not None:
+            if 2*df>self.N:
+                sys.exit("\n\nERROR: Input df such that 2*df>N\n\n")
+            else:
+                self.df = df
+
+        if dg is not None:
+            if 2*dg>self.N:
+                sys.exit("\n\nERROR: Input dg such that 2*dg>N\n\n")
+            else:
+                self.dg = dg
+                
+        if d is not None:
+            if 2*d>self.N:
+                sys.exit("\n\nERROR: Input dr such that 2*dr>N\n\n")
+            else:
+                self.dr = d
+                    
 
     def invf(self):
         """
@@ -169,16 +281,18 @@ class NTRUDecrypt:
         """
         # Make 100 attempts and exit with error if we cant find an inverse in there
         maxTries = 100
+        # We don't need g to be invertable, so just randomly gen
+        self.g = genRand10(self.N,self.dg,self.dg)
+        # Now try and generate an f with inverses mod p and mod q
         for i in range(maxTries):
-            for j in range(self.N):
-                self.f[j] = random.randint(-1,1)
+            self.f = genRand10(self.N,self.df,self.df-1)
             invStat = self.invf()
             if invStat==True:
                 break
             elif i==maxTries-1:
                 sys.exit("Cannot generate required inverses of f")
-        for j in range(self.N):
-            self.g[j] = random.randint(-1,1)
+
+
 
 
     def genh(self):
@@ -186,16 +300,16 @@ class NTRUDecrypt:
         Generate the public key from the class values (that must have been generated previously)
         """
         x = symbols('x')
-        self.h = Poly(Poly(self.p*self.fq,x)*Poly(self.g,x)%Poly(self.I,x),\
-                      domain=GF(self.q,symmetric=False)).all_coeffs()
+        self.h = Poly((Poly(self.p*self.fq,x).trunc(self.q)*Poly(self.g,x)).trunc(self.q)\
+                      %Poly(self.I,x)).all_coeffs()
 
 
     def writePub(self,filename="key"):
         """
         Write the public key file
         """
-        pubHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " \
-            + str(self.N) + "\nh :::"
+        pubHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " + str(self.N) \
+             + "\nd ::: " + str(self.dr) + "\nh :::"
         np.savetxt(filename+".pub", self.h, newline=" ", header=pubHead, fmt="%s")
 
 
@@ -204,10 +318,11 @@ class NTRUDecrypt:
         Read a public key file
         """
         with open(filename+".pub","r") as f:
-            self.p = int(f.readline().split(" ")[-1])
-            self.q = int(f.readline().split(" ")[-1])
-            self.N = int(f.readline().split(" ")[-1])
-            self.h = np.array(f.readline().split(" ")[3:-1],dtype=int)
+            self.p  = int(f.readline().split(" ")[-1])
+            self.q  = int(f.readline().split(" ")[-1])
+            self.N  = int(f.readline().split(" ")[-1])
+            self.dr = int(f.readline().split(" ")[-1])
+            self.h  = np.array(f.readline().split(" ")[3:-1],dtype=int)
         self.I         = np.zeros((self.N+1,), dtype=int)
         self.I[self.N] = -1
         self.I[0]      = 1
@@ -218,7 +333,8 @@ class NTRUDecrypt:
         Write the private key file
         """
         privHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " \
-            + str(self.N) + "\nf/fp/fq/g :::"
+            + str(self.N) + "\ndf ::: " + str(self.df) + "\ndg ::: " + str(self.dg) \
+            + "\nd ::: " + str(self.dr) + "\nf/fp/fq/g :::"
         np.savetxt(filename+".priv", (self.f,self.fp,self.fq,self.g), header=privHead, newline="\n", fmt="%s")
 
 
@@ -227,9 +343,12 @@ class NTRUDecrypt:
         Read a public key file
         """
         with open(filename+".priv","r") as f:
-            self.p = int(f.readline().split(" ")[-1])
-            self.q = int(f.readline().split(" ")[-1])
-            self.N = int(f.readline().split(" ")[-1])
+            self.p  = int(f.readline().split(" ")[-1])
+            self.q  = int(f.readline().split(" ")[-1])
+            self.N  = int(f.readline().split(" ")[-1])
+            self.df = int(f.readline().split(" ")[-1])
+            self.dg = int(f.readline().split(" ")[-1])
+            self.dr = int(f.readline().split(" ")[-1])
             tmp = f.readline()
             self.f  = np.array(f.readline().split(" "),dtype=int)
             self.fp = np.array(f.readline().split(" "),dtype=int)
@@ -243,7 +362,7 @@ class NTRUDecrypt:
     def genPubPriv(self):
         """
         Generate the public and private keys from class N, p and q values.
-        Also write output files for the public and private keys
+        Also write output files for the public and private keys.
         """
         self.genfg()
         self.genh()
@@ -253,29 +372,28 @@ class NTRUDecrypt:
 
     def decrypt(self,e):
         """
-        Decrypt the message given as in an input array e into the decrypted message m and return
+        Decrypt the message given as in an input array e into the decrypted message m and return.
         """
         # The encrypted message e must have degree < N
         if len(e)>self.N:
             sys.exit("Encrypted message has degree > N")
         # Error checks passed, now decrypt and return as a np array
         x = symbols('x')
-        a = np.array(Poly((Poly(self.f,x)*Poly(e,x))%Poly(self.I,x),\
-                          domain=GF(self.q,symmetric=True)).all_coeffs(),dtype=int)
-        b = Poly(a,x,domain=GF(self.p,symmetric=True))
-        c = Poly((Poly(self.fp,x)*b)%Poly(self.I,x),\
-                 domain=GF(self.p,symmetric=True))
+        a = ((Poly(self.f,x)*Poly(e,x))%Poly(self.I,x)).trunc(self.q)
+        b = a.trunc(self.p)
+        c = ((Poly(self.fp,x)*b)%Poly(self.I,x)).trunc(self.p)
+
         return np.array(c.all_coeffs(),dtype=int)
         
 
 
 class NTRUEncrypt:
     """
-    A class to encrypt some data based on a known public key
+    A class to encrypt some data based on a known public key.
     """
 
     
-    def __init__(self, N=503, p=3, q=256):
+    def __init__(self, N=503, p=3, q=256, d=18):
         """
         Initialise with some default N, p and q parameters.
         """
@@ -283,6 +401,8 @@ class NTRUEncrypt:
         self.p = p # Public p
         self.q = q # Public q
 
+        self.dr = d # Number of 1's in r (for encryption)
+        
         self.g = np.zeros((self.N,), dtype=int) # Private polynomial g
         self.h = np.zeros((self.N,), dtype=int) # Public key polynomial (mod q)
         self.r = np.zeros((self.N,), dtype=int) # A random `blinding value'
@@ -303,10 +423,11 @@ class NTRUEncrypt:
         Read a public key file, generate a new r value based on new N
         """
         with open(filename+".pub","r") as f:
-            self.p = int(f.readline().split(" ")[-1])
-            self.q = int(f.readline().split(" ")[-1])
-            self.N = int(f.readline().split(" ")[-1])
-            self.h = np.array(f.readline().split(" ")[3:-1],dtype=int)
+            self.p  = int(f.readline().split(" ")[-1])
+            self.q  = int(f.readline().split(" ")[-1])
+            self.N  = int(f.readline().split(" ")[-1])
+            self.dr = int(f.readline().split(" ")[-1])
+            self.h  = np.array(f.readline().split(" ")[3:-1],dtype=int)
         self.I         = np.zeros((self.N+1,), dtype=int)
         self.I[self.N] = -1
         self.I[0]      = 1
@@ -318,21 +439,45 @@ class NTRUEncrypt:
         """
         Generate the random binding polynomial array r, with values mod q
         """
-        self.r = np.zeros((self.N,), dtype=int) # A random `blinding value'
-        for i in range(self.N):
-            self.r[i] = random.randint(0,self.q-1)
+        self.r = genRand10(self.N,self.dr,self.dr)
         
 
-    def encrypt(self):
+    def setM(self,M):
+        """
+        Set the class message M after performing error checks.
+        Before calling this the public key values must have been set (i.e. read)
+        NOTE : Message M must be an array describing polynomial coefficients, where the
+               polynomial must be degree < N.
+        NOTE : The coeffcients must be in [-p/2,p/2].
+        NOTE : Message array must be an integer array.
+        """
+        if self.readKey==False:
+            sys.exit("ERROR : Public key not read before setting message")
+        if len(M)>self.N:
+            sys.exit("ERROR : Message length longer than degree of polynomial ring ideal")
+        for i in range(len(M)):
+            if M[i]<-self.p/2 or M[i]>self.p/2:
+                sys.exit("ERROR : Elements of message must be in [-p/2,p/2]")
+        # Passed the error checks, so now save the class message function, inc leading zeros
+        self.m = padArr(M,self.N)
+
+            
+    def encrypt(self,m=None):
         """
         Encrypt the message m into the array e
-        NOTE : The message m must be set befor ethis routine is called
+        NOTE : The message m must be set before this routine is called
         """
+        # We have to have read the public key before starting
         if self.readKey == False:
-          sys.exit("Error : Not read the public key file, so cannot encrypt")
+            sys.exit("Error : Not read the public key file, so cannot encrypt")
+        # If message not set as input then set from the class variable
+        if m is None:
+            m = self.m
         x = symbols('x')
-        self.e = np.array(Poly((Poly(self.r,x)*Poly(self.h,x)+Poly(self.m,x))%Poly(self.I,x),\
-                               domain=GF(self.q,symmetric=False)).all_coeffs(),dtype=int)
+        self.e = np.array(((((Poly(self.r,x)*Poly(self.h,x)).trunc(self.q)) \
+                            + Poly(self.m,x))%Poly(self.I,x)).trunc(self.q).all_coeffs(), dtype=int )
+
+
 
 
 
