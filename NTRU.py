@@ -146,14 +146,27 @@ class NTRUDecrypt:
     """
 
 
-    def __init__(self, N=503, p=3, q=256):
+    def __init__(self, N=503, p=3, q=256, df=61, dg=20, dr=18):
         """
         Initialise with some default N, p and q parameters (if not given as initialisation params)
+        
+        INPUTS:
+        =======
+        N  : Integer, order of the polynomial ring.
+        p  : Integer, modulus of inverse of f polynomial for fp.
+        q  : Integer, modulus of inverse of f polynomial for fq.
+        df : Integer, number of coefficients 1 in polynomial f.
+        dg : Integer, number of coefficients 1 in polynomial g.
+        gr : Integer, number of coefficients 1 in the random polynomial (used in encryption).
         """
         self.N = N # Public N
         self.p = p # Public p
         self.q = q # Public q
 
+        self.df = df # Number of 1's in f
+        self.dg = dg # Number of 1's in g
+        self.dr = dr # Number of 1's in r (for encryption)
+        
         self.f  = np.zeros((self.N,), dtype=int) # Private polynomial f
         self.fp = np.zeros((self.N,), dtype=int) # Inverse of f mod p
         self.fq = np.zeros((self.N,), dtype=int) # Inverse of f mod q
@@ -166,7 +179,7 @@ class NTRUDecrypt:
         self.I[0]      = 1
 
 
-    def setNpq(self,N_in,p_in,q_in):
+    def setNpq(self,N=None,p=None,q=None,df=None,dg=None,dr=None):
         """
         Set the N, p and q values and perform checks on their validity, i.e.:
           - N must be prime
@@ -181,31 +194,66 @@ class NTRUDecrypt:
         [1] Hoffstein J, Pipher J, Silverman JH. NTRU: A Ring-Based Public Key Cryptosystem. 
             Algorithmic Number Theory. 1998; 267--288. 
         """
-        # First check N is prime
-        if (not checkPrime(N_in)):
-            sys.exit("\n\nERROR: Input value of N not prime\n\n")
-        else:
-            # Otherwise set N, and initialise polynomial arrays
-            self.N  = N_in
-            self.f  = np.zeros((self.N,), dtype=int)
-            self.fp = np.zeros((self.N,), dtype=int)
-            self.fq = np.zeros((self.N,), dtype=int)
-            self.g  = np.zeros((self.N,), dtype=int)
-            self.h  = np.zeros((self.N,), dtype=int)
-            self.I         = np.zeros((self.N+1,), dtype=int)
-            self.I[self.N] = -1
-            self.I[0]      = 1
-
-        # First check that 8p<=q from [1]
-        if ((8*p_in)>q_in):
-            sys.exit("\n\nERROR: We require 8p <= q\n\n")
-        else:
-            if (gcd(p_in,q_in)!=1):
-                sys.exit("\n\nERROR: Input p and q are not coprime\n\n")
+        
+        if N is not None:
+            # First check N is prime
+            if (not checkPrime(N)):
+                sys.exit("\n\nERROR: Input value of N not prime\n\n")
             else:
-                self.p = p_in
-                self.q = q_in
+                # Error checks based on number of desired 1's and -1's in df, dg and dr arrays
+                if df is None:
+                    if 2*self.df>N:
+                        sys.exit("\n\nERROR: Input N too small compared to default df "+str(self.df)+"\n\n")
+                if dg is None:
+                    if 2*self.dg>N:
+                        sys.exit("\n\nERROR: Input N too small compared to default dg "+str(self.dg)+"\n\n")
+                if dr is None:
+                    if 2*self.dr>N:
+                        sys.exit("\n\nERROR: Input N too small compared to default dr "+str(self.dr)+"\n\n")
+                # Otherwise set N, and initialise polynomial arrays
+                self.N  = N
+                self.f  = np.zeros((self.N,), dtype=int)
+                self.fp = np.zeros((self.N,), dtype=int)
+                self.fq = np.zeros((self.N,), dtype=int)
+                self.g  = np.zeros((self.N,), dtype=int)
+                self.h  = np.zeros((self.N,), dtype=int)
+                self.I         = np.zeros((self.N+1,), dtype=int)
+                self.I[self.N] = -1
+                self.I[0]      = 1
 
+        # Can only set p and q together
+        if (p is None and q is not None) or (p is not None and q is None):
+            sys.exit("\n\nError: Can only set p and q together, not individually")
+        else:
+            # First check that 8p<=q from [1]
+            if ((8*p)>q):
+                sys.exit("\n\nERROR: We require 8p <= q\n\n")
+            else:
+                if (gcd(p,q)!=1):
+                    sys.exit("\n\nERROR: Input p and q are not coprime\n\n")
+                else:
+                    self.p = p
+                    self.q = q
+
+        if df is not None:
+            if 2*df>self.N:
+                sys.exit("\n\nERROR: Input df such that 2*df>N\n\n")
+            else:
+                self.df = df
+
+        if dg is not None:
+            if 2*dg>self.N:
+                sys.exit("\n\nERROR: Input dg such that 2*dg>N\n\n")
+            else:
+                self.dg = dg
+                
+        if dr is not None:
+            if 2*dr>self.N:
+                sys.exit("\n\nERROR: Input dr such that 2*dr>N\n\n")
+            else:
+                self.dr = dr
+                
+                    
 
     def invf(self):
         """
@@ -261,8 +309,8 @@ class NTRUDecrypt:
         """
         Write the public key file
         """
-        pubHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " \
-            + str(self.N) + "\nh :::"
+        pubHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " + str(self.N) \
+             + "\nd ::: " + str(self.dr) + "\nh :::"
         np.savetxt(filename+".pub", self.h, newline=" ", header=pubHead, fmt="%s")
 
 
@@ -271,10 +319,11 @@ class NTRUDecrypt:
         Read a public key file
         """
         with open(filename+".pub","r") as f:
-            self.p = int(f.readline().split(" ")[-1])
-            self.q = int(f.readline().split(" ")[-1])
-            self.N = int(f.readline().split(" ")[-1])
-            self.h = np.array(f.readline().split(" ")[3:-1],dtype=int)
+            self.p  = int(f.readline().split(" ")[-1])
+            self.q  = int(f.readline().split(" ")[-1])
+            self.N  = int(f.readline().split(" ")[-1])
+            self.dr = int(f.readline().split(" ")[-1])
+            self.h  = np.array(f.readline().split(" ")[3:-1],dtype=int)
         self.I         = np.zeros((self.N+1,), dtype=int)
         self.I[self.N] = -1
         self.I[0]      = 1
@@ -285,7 +334,8 @@ class NTRUDecrypt:
         Write the private key file
         """
         privHead = "p ::: " + str(self.p) + "\nq ::: " + str(self.q) + "\nN ::: " \
-            + str(self.N) + "\nf/fp/fq/g :::"
+            + str(self.N) + "\ndf ::: " + str(self.df) + "\ndg ::: " + str(self.dg) \
+            + "\nd ::: " + str(self.dr) + "\nf/fp/fq/g :::"
         np.savetxt(filename+".priv", (self.f,self.fp,self.fq,self.g), header=privHead, newline="\n", fmt="%s")
 
 
@@ -294,9 +344,12 @@ class NTRUDecrypt:
         Read a public key file
         """
         with open(filename+".priv","r") as f:
-            self.p = int(f.readline().split(" ")[-1])
-            self.q = int(f.readline().split(" ")[-1])
-            self.N = int(f.readline().split(" ")[-1])
+            self.p  = int(f.readline().split(" ")[-1])
+            self.q  = int(f.readline().split(" ")[-1])
+            self.N  = int(f.readline().split(" ")[-1])
+            self.df = int(f.readline().split(" ")[-1])
+            self.dg = int(f.readline().split(" ")[-1])
+            self.dr = int(f.readline().split(" ")[-1])
             tmp = f.readline()
             self.f  = np.array(f.readline().split(" "),dtype=int)
             self.fp = np.array(f.readline().split(" "),dtype=int)
@@ -346,7 +399,7 @@ class NTRUEncrypt:
     """
 
     
-    def __init__(self, N=503, p=3, q=256):
+    def __init__(self, N=503, p=3, q=256, dr=18):
         """
         Initialise with some default N, p and q parameters.
         """
@@ -354,6 +407,8 @@ class NTRUEncrypt:
         self.p = p # Public p
         self.q = q # Public q
 
+        self.dr = dr # Number of 1's in r (for encryption)
+        
         self.g = np.zeros((self.N,), dtype=int) # Private polynomial g
         self.h = np.zeros((self.N,), dtype=int) # Public key polynomial (mod q)
         self.r = np.zeros((self.N,), dtype=int) # A random `blinding value'
@@ -374,10 +429,11 @@ class NTRUEncrypt:
         Read a public key file, generate a new r value based on new N
         """
         with open(filename+".pub","r") as f:
-            self.p = int(f.readline().split(" ")[-1])
-            self.q = int(f.readline().split(" ")[-1])
-            self.N = int(f.readline().split(" ")[-1])
-            self.h = np.array(f.readline().split(" ")[3:-1],dtype=int)
+            self.p  = int(f.readline().split(" ")[-1])
+            self.q  = int(f.readline().split(" ")[-1])
+            self.N  = int(f.readline().split(" ")[-1])
+            self.dr = int(f.readline().split(" ")[-1])
+            self.h  = np.array(f.readline().split(" ")[3:-1],dtype=int)
         self.I         = np.zeros((self.N+1,), dtype=int)
         self.I[self.N] = -1
         self.I[0]      = 1
