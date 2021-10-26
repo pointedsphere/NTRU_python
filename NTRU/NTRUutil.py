@@ -2,7 +2,6 @@ import numpy as np
 from math import log, gcd
 import random
 import sys
-import 
 # Use sympy for polynomial operations
 from sympy import Poly, symbols, GF, invert
 
