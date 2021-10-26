@@ -82,6 +82,7 @@ def poly_inv(poly_in,poly_I,poly_mod):
     # Passed the error check so return polynomial coefficients as array
     return padArr(np.array(Poly(inv,x).all_coeffs(),dtype=int),Npoly_I-1)
 
+
     
 def padArr(A_in,A_out_size):
     """
@@ -89,6 +90,7 @@ def padArr(A_in,A_out_size):
     Return the numy array of size A_out_size with leading zeros
     """
     return np.pad(A_in,(A_out_size-len(A_in),0),constant_values=(0))
+
 
 
 def genRand10(L,P,M):
@@ -149,6 +151,7 @@ def str2bit(st):
     NOTE : The initial "0b" is removed from the output array.
     """
     return np.array(list(bin(int.from_bytes(str(st).encode(), "big")))[2:],dtype=int)
+
 
 
 def bit2str(bi):
