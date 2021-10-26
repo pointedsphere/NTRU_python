@@ -2,6 +2,7 @@ import numpy as np
 from math import log, gcd
 import random
 import sys
+import 
 # Use sympy for polynomial operations
 from sympy import Poly, symbols, GF, invert
 
@@ -136,6 +137,29 @@ def genRand10(L,P,M):
     return R
 
 
+def arr2str(ar):
+    """
+    Convert a numpy array to a string containing only the elements of the array.
+
+    INPUTS:
+    =======
+    ar : Numpy array, elements will be concatonated and returned as string.
+
+    RETURNS:
+    ========
+    A string containing all the elements of ar concatanated, each element seperated by a space
+    """
+    st = np.array_str(ar)
+    st = st.replace("[", "",1)
+    st = st.replace("]", "",1)
+    st = st.replace("\n", "")
+    st = st.replace("     ", " ")
+    st = st.replace("    ", " ")
+    st = st.replace("   ", " ")
+    st = st.replace("  ", " ")
+    return st
+    
+
 def str2bit(st):
     """
     Convert the input string st into a binary representation of the string, with each
@@ -167,10 +191,7 @@ def bit2str(bi):
     ========
     A string, the binary values in the bi array converted to a string.
     """
-    S = np.array_str(bi)
-    S = S.replace("[", "",1)
-    S = S.replace("]", "",1)
-    S = S.replace("\n", "")
+    S = att2str(bi)
     S = S.replace(" ", "")
     S = int("0b"+S,2)
     return S.to_bytes((S.bit_length() + 7) // 8, 'big').decode()
