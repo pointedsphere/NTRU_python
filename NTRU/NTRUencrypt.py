@@ -97,6 +97,7 @@ class NTRUencrypt:
         # Actually perfrom the encryption, set the class variable
         self.e = np.array(((((Poly(self.r,x)*Poly(self.h,x)).trunc(self.q)) \
                             + Poly(self.m,x))%Poly(self.I,x)).trunc(self.q).all_coeffs(), dtype=int )
+        self.e = padArr(self.e,self.N)
         
 
     def encryptString(self,M):
@@ -114,14 +115,15 @@ class NTRUencrypt:
         # such that its length is a multiple of N
         bM = str2bit(M)
         bM = padArr(bM,len(bM)-np.mod(len(bM),self.N)+self.N)
-
+        
         # We then need an empty string to save the encrypted message to
         self.Me = ""
 
         # And loop through encrypting each message block (of length N) with different random polynomial
         for E in range(len(bM)//self.N):
-            self.genr()                              # Gen random obsfocating polynomial
-            self.setM(bM[E*self.N:(E+1)*self.N])     # Set the messsage to encrypt as single block
-            self.encrypt()                           # Encrypt the saved message
-            self.Me = self.Me + arr2str(self.e) # Append encrypted to string
+            self.genr()                               # Gen random obsfocating polynomial
+            self.setM(bM[E*self.N:(E+1)*self.N])      # Set the messsage to encrypt as single block
+            self.encrypt()                            # Encrypt the saved message
+            self.Me = self.Me + arr2str(self.e) + " " # Append encrypted to string
+
         
