@@ -132,3 +132,24 @@ def genRand10(L,P,M):
     # Return a randomised array
     np.random.shuffle(R)
     return R
+
+
+def str2bit(st):
+    """
+    Convert the input string st into a binary representation of the string, with each
+    bit as an element of an integer numpy array.
+    """
+    return np.array(list(bin(int.from_bytes(str(st).encode(), "big")))[2:],dtype=int)
+
+
+def bit2str(bi):
+    """
+    Convert an array of bits to the string described by those bits.
+    """
+    S = np.array_str(bi)
+    S = S.replace("[", "",1)
+    S = S.replace("]", "",1)
+    S = S.replace("\n", "")
+    S = S.replace(" ", "")
+    S = int("0b"+S,2)
+    return S.to_bytes((S.bit_length() + 7) // 8, 'big').decode()
