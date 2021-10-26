@@ -10,8 +10,6 @@ from NTRU.NTRUutil import *
 N1 = NTRUdecrypt()
 N1.setNpq(N=107,p=3,q=64,df=15,dg=12,d=5)
 N1.genPubPriv()
-N1.readPriv()
-# N1.setNpq()
 
 # Encrypt a test mesage array
 N2 = NTRUencrypt()
@@ -68,6 +66,6 @@ print("Mb : ",str2bit(MSG))
 N2.encryptString(MSG)
 print("Me : ",N2.Me)
 
-# And then decrypt the string
+# And then decrypt the string and print for a check
 N1.decryptString(N2.Me)
 print("M  : ",N1.M)
