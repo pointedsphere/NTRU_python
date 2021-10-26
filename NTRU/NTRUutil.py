@@ -138,6 +138,15 @@ def str2bit(st):
     """
     Convert the input string st into a binary representation of the string, with each
     bit as an element of an integer numpy array.
+
+    INPUTS:
+    =======
+    st : String, to be converted to an array of integers representing the string in binary.
+
+    RETURNS:
+    ========
+    A numpy array containing only 1's and 0's representing the input string st in binary.
+    NOTE : The initial "0b" is removed from the output array.
     """
     return np.array(list(bin(int.from_bytes(str(st).encode(), "big")))[2:],dtype=int)
 
@@ -145,6 +154,15 @@ def str2bit(st):
 def bit2str(bi):
     """
     Convert an array of bits to the string described by those bits.
+
+    INPUTS:
+    =======
+    bi : Numpy integer array, containing only 1's and 0's. When flattened this represents a
+         string (not including the "0b" prefix).
+
+    RETURNS:
+    ========
+    A string, the binary values in the bi array converted to a string.
     """
     S = np.array_str(bi)
     S = S.replace("[", "",1)
@@ -153,3 +171,4 @@ def bit2str(bi):
     S = S.replace(" ", "")
     S = int("0b"+S,2)
     return S.to_bytes((S.bit_length() + 7) // 8, 'big').decode()
+
