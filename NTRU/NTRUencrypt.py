@@ -87,8 +87,10 @@ class NTRUencrypt:
         if self.readKey == False:
             sys.exit("Error : Not read the public key file, so cannot encrypt")
         # If message not set as input then set from the class variable
-        if m is None:
-            m = self.m
+        if m is not None:
+            if len(m)>self.N:
+                sys.exit("\n\nERROR: Polynomial message of degree >= N")
+            self.m = m
         x = symbols('x')
         self.e = np.array(((((Poly(self.r,x)*Poly(self.h,x)).trunc(self.q)) \
                             + Poly(self.m,x))%Poly(self.I,x)).trunc(self.q).all_coeffs(), dtype=int )
