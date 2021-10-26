@@ -7,7 +7,6 @@ class NTRUencrypt:
     """
     A class to encrypt some data based on a known public key.
     """
-
     
     def __init__(self, N=503, p=3, q=256, d=18):
         """
@@ -33,6 +32,9 @@ class NTRUencrypt:
 
         self.readKey = False # We have not yet read the public key file
 
+        # Variables to save any possible encrypted messages (if req)
+        self.Me = None # The encrypted message as a string
+        
 
     def readPub(self,filename="key"):
         """
@@ -92,7 +94,34 @@ class NTRUencrypt:
                 sys.exit("\n\nERROR: Polynomial message of degree >= N")
             self.m = m
         x = symbols('x')
+        # Actually perfrom the encryption, set the class variable
         self.e = np.array(((((Poly(self.r,x)*Poly(self.h,x)).trunc(self.q)) \
                             + Poly(self.m,x))%Poly(self.I,x)).trunc(self.q).all_coeffs(), dtype=int )
+        
 
+    def encryptString(self,M):
+        """
+        Encrypt the input string M by first converting to binary
 
+        NOTE : The public key must have been read before running this routine
+        """
+
+        # We have to have read the public key before starting
+        if self.readKey == False:
+            sys.exit("Error : Not read the public key file, so cannot encrypt")
+        
+        # Create a binary array of the input string, and pad it with leading zeros
+        # such that its length is a multiple of N
+        bM = str2bit(M)
+        bM = padArr(bM,len(bM)-np.mod(len(bM),self.N)+self.N)
+
+        # We then need an empty string to save the encrypted message to
+        self.Me = ""
+
+        # And loop through encrypting each message block (of length N) with different random polynomial
+        for E in range(len(bM)//self.N):
+            self.genr()                              # Gen random obsfocating polynomial
+            self.setM(bM[E*self.N:(E+1)*self.N])     # Set the messsage to encrypt as single block
+            self.encrypt()                           # Encrypt the saved message
+            self.Me = self.Me + arr2str(self.e) # Append encrypted to string
+        
