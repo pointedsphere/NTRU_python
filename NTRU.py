@@ -1,9 +1,4 @@
 import numpy as np
-# from math import log, gcd
-# import random
-# import sys
-# # Use sympy for polynomial operations
-# from sympy import Poly, symbols, GF, invert
 
 from NTRU.NTRUencrypt import NTRUencrypt
 from NTRU.NTRUdecrypt import NTRUdecrypt
