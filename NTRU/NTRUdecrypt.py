@@ -47,6 +47,9 @@ class NTRUdecrypt:
         self.I[self.N] = -1
         self.I[0]      = 1
 
+        # Empty string to store a decrypted string
+        self.M = None
+
 
     def setNpq(self,N=None,p=None,q=None,df=None,dg=None,d=None):
         """
@@ -93,7 +96,7 @@ class NTRUdecrypt:
         # Can only set p and q together
         if (p is None and q is not None) or (p is not None and q is None):
             sys.exit("\n\nError: Can only set p and q together, not individually")
-        else:
+        elif (p is not None) and (q is not None):
             # First check that 8p<=q from [1]
             if ((8*p)>q):
                 sys.exit("\n\nERROR: We require 8p <= q\n\n")
@@ -160,8 +163,6 @@ class NTRUdecrypt:
                 break
             elif i==maxTries-1:
                 sys.exit("Cannot generate required inverses of f")
-
-
 
 
     def genh(self):
@@ -253,3 +254,24 @@ class NTRUdecrypt:
         c = ((Poly(self.fp,x)*b)%Poly(self.I,x)).trunc(self.p)
 
         return np.array(c.all_coeffs(),dtype=int)
+
+
+    def decryptString(self,E):
+        """
+        Decrypt a message encoded using the requisite public key from an encoded to a decoded string.
+        """
+
+        # First convert the string to a numpy
+        Me = np.fromstring(E, dtype=int, sep=' ')
+        # And check the input array is the correct length, i.e. an integer multiple of N
+        if np.mod(len(Me),self.N)!=0:
+            sys.exit("\n\nERROR : Input decrypt string is not integer multiple of N\n\n")
+
+        # Now decrypt each block, appending to the message string
+        Marr = np.array([],dtype=int)
+        for D in range(len(Me)//self.N):
+            Marr = np.concatenate((Marr,padArr(self.decrypt(Me[D*self.N:(D+1)*self.N]),self.N)))
+
+        # And return the string decrypted
+        self.M = bit2str(Marr)
+    

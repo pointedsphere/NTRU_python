@@ -5,7 +5,7 @@ import sys
 # Use sympy for polynomial operations
 from sympy import Poly, symbols, GF, invert
 
-
+np.set_printoptions(threshold=sys.maxsize)
 
 def checkPrime(P):
     """
@@ -82,6 +82,7 @@ def poly_inv(poly_in,poly_I,poly_mod):
     # Passed the error check so return polynomial coefficients as array
     return padArr(np.array(Poly(inv,x).all_coeffs(),dtype=int),Npoly_I-1)
 
+
     
 def padArr(A_in,A_out_size):
     """
@@ -89,6 +90,7 @@ def padArr(A_in,A_out_size):
     Return the numy array of size A_out_size with leading zeros
     """
     return np.pad(A_in,(A_out_size-len(A_in),0),constant_values=(0))
+
 
 
 def genRand10(L,P,M):
@@ -134,6 +136,29 @@ def genRand10(L,P,M):
     return R
 
 
+def arr2str(ar):
+    """
+    Convert a numpy array to a string containing only the elements of the array.
+
+    INPUTS:
+    =======
+    ar : Numpy array, elements will be concatonated and returned as string.
+
+    RETURNS:
+    ========
+    A string containing all the elements of ar concatanated, each element seperated by a space
+    """
+    st = np.array_str(ar)
+    st = st.replace("[", "",1)
+    st = st.replace("]", "",1)
+    st = st.replace("\n", "")
+    st = st.replace("     ", " ")
+    st = st.replace("    ", " ")
+    st = st.replace("   ", " ")
+    st = st.replace("  ", " ")
+    return st
+    
+
 def str2bit(st):
     """
     Convert the input string st into a binary representation of the string, with each
@@ -148,7 +173,8 @@ def str2bit(st):
     A numpy array containing only 1's and 0's representing the input string st in binary.
     NOTE : The initial "0b" is removed from the output array.
     """
-    return np.array(list(bin(int.from_bytes(str(st).encode(), "big")))[2:],dtype=int)
+    return np.array(list(bin(int.from_bytes(str(st).encode(),"big")))[2:],dtype=int)
+
 
 
 def bit2str(bi):
@@ -164,11 +190,24 @@ def bit2str(bi):
     ========
     A string, the binary values in the bi array converted to a string.
     """
-    S = np.array_str(bi)
-    S = S.replace("[", "",1)
-    S = S.replace("]", "",1)
-    S = S.replace("\n", "")
+
+    # Make sure the number of bits in the string is divisable by 8 (8 bits per character)
+    S = padArr(bi,len(bi)+np.mod(len(bi),8))
+    
+    # Convert the input binary array to a string and remove any spaces
+    S = arr2str(bi)
     S = S.replace(" ", "")
-    S = int("0b"+S,2)
-    return S.to_bytes((S.bit_length() + 7) // 8, 'big').decode()
+
+    # Then take each 8 bit section on its own, starting from last bits (to avoid issues
+    # that can arrise from padding the front of the array with 0's)
+    charOut = ""
+    for i in range(len(S)//8):
+        if i==0:
+            charb = S[len(S)-8:]
+        else:
+            charb = S[-(i+1)*8:-i*8]
+        charb   = int(charb,2)
+        charOut = charb.to_bytes((charb.bit_length()+7)//8,"big").decode("utf-8",errors="ignore") + charOut
+    return charOut
+
 
