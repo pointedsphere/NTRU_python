@@ -183,11 +183,11 @@ class NTRUdecrypt:
         np.savetxt(filename+".pub", self.h, newline=" ", header=pubHead, fmt="%s")
 
 
-    def readPub(self,filename="key"):
+    def readPub(self,filename="key.pub"):
         """
         Read a public key file
         """
-        with open(filename+".pub","r") as f:
+        with open(filename,"r") as f:
             self.p  = int(f.readline().split(" ")[-1])
             self.q  = int(f.readline().split(" ")[-1])
             self.N  = int(f.readline().split(" ")[-1])
@@ -208,11 +208,11 @@ class NTRUdecrypt:
         np.savetxt(filename+".priv", (self.f,self.fp,self.fq,self.g), header=privHead, newline="\n", fmt="%s")
 
 
-    def readPriv(self,filename="key"):
+    def readPriv(self,filename="key.priv"):
         """
         Read a public key file
         """
-        with open(filename+".priv","r") as f:
+        with open(filename,"r") as f:
             self.p  = int(f.readline().split(" ")[-1])
             self.q  = int(f.readline().split(" ")[-1])
             self.N  = int(f.readline().split(" ")[-1])
@@ -229,15 +229,15 @@ class NTRUdecrypt:
         self.I[0]      = 1
 
         
-    def genPubPriv(self):
+    def genPubPriv(self,keyfileName="key"):
         """
         Generate the public and private keys from class N, p and q values.
         Also write output files for the public and private keys.
         """
         self.genfg()
         self.genh()
-        self.writePub()
-        self.writePriv()
+        self.writePub(keyfileName)
+        self.writePriv(keyfileName)
 
 
     def decrypt(self,e):

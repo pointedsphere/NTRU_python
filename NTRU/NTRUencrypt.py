@@ -36,11 +36,11 @@ class NTRUencrypt:
         self.Me = None # The encrypted message as a string
         
 
-    def readPub(self,filename="key"):
+    def readPub(self,filename="key.pub"):
         """
         Read a public key file, generate a new r value based on new N
         """
-        with open(filename+".pub","r") as f:
+        with open(filename,"r") as f:
             self.p  = int(f.readline().split(" ")[-1])
             self.q  = int(f.readline().split(" ")[-1])
             self.N  = int(f.readline().split(" ")[-1])
