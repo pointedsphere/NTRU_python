@@ -229,15 +229,15 @@ class NTRUdecrypt:
         self.I[0]      = 1
 
         
-    def genPubPriv(self):
+    def genPubPriv(self,keyfileName="key"):
         """
         Generate the public and private keys from class N, p and q values.
         Also write output files for the public and private keys.
         """
         self.genfg()
         self.genh()
-        self.writePub()
-        self.writePriv()
+        self.writePub(keyfileName)
+        self.writePriv(keyfileName)
 
 
     def decrypt(self,e):
