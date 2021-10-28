@@ -1,4 +1,4 @@
-# NTRUEncrypt_python
+# NTRU in python
 
 An implementation of the NTRU encryption and decryption algorithm in Python 3 following the original paper by Hoffstein, Pipher and Silverman [1].
 
