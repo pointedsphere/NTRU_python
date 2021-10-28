@@ -9,6 +9,7 @@ from argparse import RawTextHelpFormatter
 import sys
 from os.path import exists
 
+
 prog_description = """
 
 An implementation of the NTRU encryption algorithm in python3.
@@ -25,15 +26,13 @@ References:
 """
 
 
-# Add the input arguments (with defaults)
+# Add the input arguments
 parser = argparse.ArgumentParser(prog="NTRU Encrypt/Decrypt",\
                                  description=prog_description,\
                                  epilog=prog_epilog,\
                                  formatter_class=RawTextHelpFormatter)
-
 parser.add_argument("-k","--key-name",default="key",type=str,\
                     help="The filename of the public and private keys (key_name.pub and (key_name.priv).")
-
 parser.add_argument("-G","--Gen",action="store_true",\
                     help="Generate the public and private key files.\n"\
                     +"Default key parameters are the high security parameters from [1].")
@@ -43,7 +42,6 @@ parser.add_argument("-H","--high-sec",action="store_true",\
                     help="If given with -G flag generate high security keys from [1] with N=167, p=3, q=128.")
 parser.add_argument("-HH","--highest-sec",action="store_true",\
                     help="If given with -G flag generate highest security keys from [1] with N=503, p=3, q=256.")
-
 parser.add_argument("-N","--N",default=167,type=int,\
                     help="The order of the polynomial ring, default 503.")
 parser.add_argument("-p","--p",default=3,type=int,\
@@ -56,12 +54,10 @@ parser.add_argument("-dg","--dg",default=20,type=int,\
                     help="Polynomial g has dg 1's and -1's, default 20.")
 parser.add_argument("-d","--d",default=18,type=int,\
                     help="Random obfuscating polynomial has d 1's and -1's, default 18.")
-
 parser.add_argument("-O","--out_file",type=str,\
                     help="Output file for encrypted/decrypted data/string.")
 parser.add_argument("-T","--out_in_term",action="store_true",\
                     help="Output encrypted/decrypted data/string to terminal.")
-
 parser.add_argument("-eS","--Enc_string",type=str,\
                     help="Encrypt the string given as an input.\n"\
                     +"Note: String must be given in quotation marks, e.g. \"a string\".\n"
@@ -69,7 +65,6 @@ parser.add_argument("-eS","--Enc_string",type=str,\
 parser.add_argument("-eF","--Enc_file",type=str,\
                     help="Encrypt the string given in this input file.\n"
                     +"Note: This always requires a known public key.")
-
 parser.add_argument("-dS","--Dec_string",type=str,\
                     help="Decrypt the string given as an input.\n"\
                     +"Note: String must be given in quotation marks, e.g. \"a string\".\n"
@@ -77,18 +72,13 @@ parser.add_argument("-dS","--Dec_string",type=str,\
 parser.add_argument("-dF","--Dec_file",type=str,\
                     help="Decrypt the string given in this input file.\n"
                     +"Note: This always requires a known private key.")
-
-
-
-
-
 args = parser.parse_args()
 
 
 
 if __name__ == "__main__":
 
-    # Run all of the various NTRU methods from the command line
+
     
     if (args.Gen):
 
@@ -202,7 +192,5 @@ if __name__ == "__main__":
             with open(args.out_file,"w") as f:
                 f.write(D.M)
 
-        
 
-                
 
