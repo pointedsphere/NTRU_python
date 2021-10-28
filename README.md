@@ -4,9 +4,9 @@ An implementation of the NTRU encryption and decryption algorithm in Python 3 fo
 
 This package is a toy implementation created in order to understand the cryptosystem better. As such in it's current state it should be approached more cautiously than one usually would approach a cryptosystem implementation found on github.
 
-Furthermore, note that polynomials are carried out using the `sympy` module, which is not necessarily the most cost effective method especially for larger order polynomial rings.
+Furthermore, note polynomials are carried out using the `sympy` module, which is not necessarily the most cost effective method of polynomial operations especially for larger order polynomial rings.
 
-Also, note that the encrypted outputs are not compressed in any way. There are trivial methods one could use to do this, but it is easier to see exactly what is going on with the algorithm without any form of compression. As such data here is left uncompressed (for now).
+Also, note the encrypted outputs are not compressed in any way. There are trivial methods one could use to do this, but it is easier to see exactly what is going on with the algorithm without any form of compression. As such data here is left uncompressed (for now).
 
 
 
@@ -20,15 +20,15 @@ Before use the python modules `sympy` and `numpy` must be installed to the envir
 
 To generate the keys we call `NTRY.py` with the flag `-G`. This can be done with 3 default levels of security based on the parameters given in [1] using the flags
 
-- `-M`  :: Moderate security with N=107, p=3, q=64, df=15, dg=12, d=5
-- `-H`  :: High security with N=167, p=3, q=128, df=61, dg=20, d=18.
-- `-HH` :: Highest security with N=256, p=3, q=128, df=216, dg=72, d=55.
+- `-M`  ::: Moderate security with N=107, p=3, q=64, df=15, dg=12, d=5
+- `-H`  ::: High security with N=167, p=3, q=128, df=61, dg=20, d=18.
+- `-HH` ::: Highest security with N=256, p=3, q=128, df=216, dg=72, d=55.
 
-where N is the order of the polynomial ring, p is the modulus of the polynomial p (which has df 1 coefficients and df-1 -1 coefficients), q is the modulus of the polynomial g (which has dg 1 and -1 coefficients) and d is the number of 1 and -1 coefficients in the obfuscating polynomial.
+where N is the order of the polynomial ring, p is the modulus of the polynomial f (which has df 1 coefficients and df-1 -1 coefficients), q is the modulus of the polynomial g (which has dg 1 and -1 coefficients) and d is the number of 1 and -1 coefficients in the obfuscating polynomial.
 
 Values of N, p, q, df, dg and d can also be given individually with the flags `-N`, `-p`, `-q`, `-df`, `-dg` and `-d` respectively.
 
-We may also change the filenames of the output key files with the flag `-k` (default `key`).
+We may also change the filenames of the output key files with the flag `-k` (the default is `key`).
 
 #### Example
 
@@ -42,15 +42,17 @@ which generates 2 files in the current directory, `NTRU_key.pub` and `NTRU_key.p
 
 
 
-### Encrypting a String
+### Encryption of a String
 
 We can encrypt either a string given on the command line with the flag `-eS`, or read text from a file and encrypt with the flag `-eF`. We output the encrypted data either to the command line with the flag `-T` or to a file with the flag `-O`.
+
+The key can be given (just filename, no `.pub`) with the flag `-k`, if not given default of `key` is assumed.
 
 Note, if the string has a length greater than the maximum order of a polynomial in the current ring (N) it is split into blocks of length N. Each block is encrypted with a different random obfuscating polynomial of order N with d 1 and -1 coefficients.
 
 #### Example
 
-We utilise the public key `NTRU_key.pub` we generated earlier for this encryption. First we encrypt the string "Hello World!" and output the result to the command line:
+We utilise the public key `NTRU_key.pub` we generated earlier for this encryption. First we encrypt the string "Hello World" and output the result to the command line:
 
 ```
 python3 NTRU.py -k NTRU_key -eS "Hello World" -T
@@ -74,7 +76,9 @@ python3 NTRU.py -k NTRU_key -eF A1S1_Tempest -O enc.dat
 
 ### Decryption of a String
 
-Decryption of a string is done in a similar way, using an input string on the command line with the flag `-dS` or with an input file with `-dF`. We output the encrypted data either to the command line with the flag `-T` or to a file with the flag `-O`.
+Decryption of a string is done in a similar way, using an input string on the command line with the flag `-dS` or with an input file using the `-dF` flag. We output the encrypted data either to the command line with the flag `-T` or to a file with the flag `-O`.
+
+The key can be given (just filename, no `.priv`) with the flag `-k`, if not given default of `key` is assumed.
 
 #### Example
 
