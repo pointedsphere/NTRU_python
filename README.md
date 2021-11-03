@@ -2,9 +2,9 @@
 
 An implementation of the NTRU encryption and decryption algorithm in Python 3 following the original paper by Hoffstein, Pipher and Silverman [1].
 
-This package is a toy implementation created in order to understand the cryptosystem better. As such in it's current state it should be approached more cautiously than one usually would approach a cryptosystem implementation found on github.
+This package is a toy implementation created in order to understand the cryptosystem better. As such in its current state it should be approached with more caution than one would usually use when approaching a cryptosystem implementation found on github.
 
-Furthermore, note polynomials are carried out using the `sympy` module, which is not necessarily the most cost effective method of polynomial operations especially for larger order polynomial rings.
+Furthermore, polynomials are carried out using the `sympy` module, which is not necessarily the most cost effective method for polynomial operations especially for larger order polynomial rings.
 
 Also, note the encrypted outputs are not compressed in any way. There are trivial methods one could use to do this, but it is easier to see exactly what is going on with the algorithm without any form of compression. As such data here is left uncompressed (for now).
 
